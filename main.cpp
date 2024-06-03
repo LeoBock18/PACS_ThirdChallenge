@@ -1,8 +1,15 @@
 #include<iostream>
-#include<mpi.h>
+#include<array>
+#include<functional>
+#include<vector>
 #include<cmath>
+#include<mpi.h>
 #include"jacobi.hpp"
 #include"densemat.hpp"
+
+using Matrix = la::dense_matrix;
+using Real = double;
+using Real_vec = std::array<Real,2>;
 
 int main(int argc, char* argv[])
 {
@@ -12,17 +19,30 @@ int main(int argc, char* argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    if(rank==0)
+    Real pi = M_PI;
+    std::size_t n_max = 5000;
+    int n = 101;
+    Real tol = 1e-4;
+    std::function< Real (Real_vec) > f = [pi](auto const & x){return 8*pi*pi*std::sin(2*pi*x[0])*std::sin(2*pi*x[1]);};
+    std::function< Real (Real_vec) > u_ex = [pi](auto const & x){return std::sin(2*pi*x[0])*std::sin(2*pi*x[1]);};
+
+    Matrix res = jacobi::solve(n, f, tol, n_max);
+
+    double h = 1./(n-1);
+    if(rank == 0)
     {
-        jacobi::Real pi = M_PI;
-        std::size_t n_max = 1000;
-        int n = 4;
-        jacobi::Real tol = 1e-3;
-        std::function< jacobi::Real (jacobi::Real_vec) > f = [pi](auto const & x){return 8*pi*pi*std::sin(2*pi*x[0])*std::sin(2*pi*x[1]);};
-
-        la::dense_matrix res = jacobi::solve(n, f, tol, n_max);
-
-        std::cout << "Matrix:\n" << res;
+        Real err_ex{0};
+        for(std::size_t i = 0; i < n; ++i)
+        {
+            for(std::size_t j = 0; j < n; ++j)
+            {
+                err_ex += (res(i,j) - u_ex({h*i,h*j})) * (res(i,j) - u_ex({h*i,h*j}));
+            }
+        }
+        err_ex *= h;
+        err_ex = sqrt(err_ex);
+        std::cout << "Result:\n" << res << std::endl;
+        std::cout << "\nError: " << err_ex << std::endl;
     }
 
     MPI_Finalize();

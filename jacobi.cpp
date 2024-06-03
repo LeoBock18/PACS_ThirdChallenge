@@ -11,37 +11,39 @@ Matrix solve(int n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    Real h = 1./(n-1);
+    
+    double h = 1./(n-1);
     // Split number of rows (remainers among first processes)
     //int local_rows = (n % size < rank) ? n/size : n/size+1;
 
     // Evaluate number of local elements stored by each process and displacement (remainers among first processes)
+    int local_rows = (n % size <= rank) ? n/size : n/size+1;
     std::vector<int> recv_counts(size,0), displ(size,0);
     int start_idx{0};
     for(std::size_t i = 0; i < size; ++i)
     {
-        recv_counts[i] = (n % size < i) ? n/size : n/size+1;
+        recv_counts[i] = (n % size <= i) ? n/size*n : (n/size+1)*n;
         displ[i] = start_idx;
         start_idx += recv_counts[i];
     }
     
     // Construct local matrices and rhs
-    Matrix local_mat(recv_counts[rank], n, 0.);
-    Matrix local_f(recv_counts[rank], n);
+    Matrix local_mat(local_rows, n, 0.);
+    Matrix local_f(local_rows, n, 0.);
 
     // Construct domain nodes (1D)
-    std::vector<Real> x(n);
+    std::vector<Real> x(n, 0.);
     for(std::size_t i = 0; i < n; ++i)
     {
         x[i] = h*i;
     }
 
     // Force matrix (put it in other loop if extra of dirichlet)
-    for(std::size_t i = 0; i < recv_counts[rank]; ++i)
+    for(std::size_t i = 0; i < local_rows; ++i)
     {
-        for(std::size_t j = 0; j< n; ++j)
+        for(std::size_t j = 0; j < n; ++j)
         {
-            std::size_t curr_row = displ[rank] + i;
+            std::size_t curr_row = displ[rank]/n + i;
             local_f(i,j) = f({x[curr_row],x[j]});
         }
     }
@@ -81,13 +83,15 @@ Matrix solve(int n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_
         // Sending lower row
         if(rank != size-1)
         {
-            MPI_Send(local_mat.extract_row(recv_counts[rank]-1).data(), n, MPI_DOUBLE, rank+1, rank, MPI_COMM_WORLD);
+            MPI_Send(local_mat.extract_row(local_rows-1).data(), n, MPI_DOUBLE, rank+1, rank, MPI_COMM_WORLD);
         }
         // Receiving lower row (from rank pov, it is upper row)
         if(rank != 0)
         {
             MPI_Recv(upper_row.data(), n, MPI_DOUBLE, rank-1, rank-1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
+
+        MPI_Barrier(MPI_COMM_WORLD);
 
         // Sending upper row
         if(rank != 0)
@@ -100,8 +104,11 @@ Matrix solve(int n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_
             MPI_Recv(lower_row.data(), n, MPI_DOUBLE, rank+1, rank+1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
 
+        MPI_Barrier(MPI_COMM_WORLD);
+        
+
         // Jacobi iteration (common to all ranks)
-        for(std::size_t i = 1; i < recv_counts[rank]-1; ++i)
+        for(std::size_t i = 1; i < local_rows-1; ++i)
         {
             for(std::size_t j = 1; j < n-1; ++j)
             {
@@ -121,7 +128,7 @@ Matrix solve(int n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_
         {
             for(std::size_t j = 1; j < n-1; ++j)
             {
-                std::size_t curr_row = recv_counts[rank]-1;
+                std::size_t curr_row = local_rows-1;
                 new_mat(curr_row,j) +=  0.25 * (local_mat(curr_row-1,j) + lower_row[j] + local_mat(curr_row,j-1) + local_mat(curr_row,j+1) + h*h*local_f(curr_row,j));
             }
         }
@@ -130,7 +137,7 @@ Matrix solve(int n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_
         Real err{0};
         if(rank != 0 and rank != size-1)
         {
-            for(std::size_t i = 0; i < recv_counts[rank]; ++i)
+            for(std::size_t i = 0; i < local_rows; ++i)
             {
                 for(std::size_t j = 1; j < n-1; ++j)
                 {
@@ -142,7 +149,7 @@ Matrix solve(int n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_
         }
         else if(rank == 0)
         {
-            for(std::size_t i = 1; i < recv_counts[rank]; ++i)
+            for(std::size_t i = 1; i < local_rows; ++i)
             {
                 for(std::size_t j = 1; j < n-1; ++j)
                 {
@@ -154,7 +161,7 @@ Matrix solve(int n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_
         }
         else if(rank == size-1)
         {
-            for(std::size_t i = 0; i < recv_counts[rank]-1; ++i)
+            for(std::size_t i = 0; i < local_rows-1; ++i)
             {
                 for(std::size_t j = 1; j < n-1; ++j)
                 {
@@ -173,6 +180,8 @@ Matrix solve(int n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_
         if(err < tol)
         {
             all_stop = true;
+            if(rank == 0)
+                std::cout << n_iter << std::endl;
         }
         // Increase number of iteration
         ++n_iter;
@@ -180,7 +189,7 @@ Matrix solve(int n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_
     
     // Build global matrix
     Matrix res(n,n);
-    MPI_Gatherv(local_mat.data(), recv_counts[rank], MPI_DOUBLE, res.data(), recv_counts.data(), displ.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Gatherv(local_mat.data(), local_rows*n, MPI_DOUBLE, res.data(), recv_counts.data(), displ.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     return res;
 }
