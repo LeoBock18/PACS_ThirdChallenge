@@ -5,7 +5,7 @@ using Matrix = la::dense_matrix;
 
 namespace jacobi{
 
-Matrix solve(int n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_max)
+Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_max)
 {
     int rank,size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);

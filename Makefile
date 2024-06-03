@@ -1,19 +1,16 @@
-MPICXX ?= mpicxx
-CXXFLAGS ?= -std=c++20 -Wall -Wextra
-CPPFLAGS ?= -I. -I./usr/lib/openmpi/include
+MPICXX ?= mpic++
+CXXFLAGS ?= -std=c++20 -O3
+CPPFLAGS ?= -fopenmp -I. -I${PACS_ROOT}/include -DNDEBUG
 LDLIBS += -L${PACS_ROOT}/lib -lpacs
-LDFLAGS ?= -O3
+LDFLAGS ?=
 TARGET = main
-HEADERS = densemat.hpp jacobi.hpp
-SRCS = main.cpp densemat.cpp densemat.cpp
-OBJS = $(SRCS:.cpp=.o)
 
 .PHONY: all clean distclean run
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
-	$(MPICXX) $(CXXFLAGS) -o $(TARGET) $(SRCS) $(LDLIBS)
+$(TARGET): %: %.cpp
+	$(MPICXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $< $(LDLIBS) -o $@
 
 clean:
 	$(RM) *.o
