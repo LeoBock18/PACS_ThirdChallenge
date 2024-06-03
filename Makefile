@@ -15,7 +15,7 @@ $(TARGET): %: %.cpp
 clean:
 	$(RM) *.o
 distclean: clean
-	$(RM) $(TARGET)
+	$(RM) $(TARGET) *.vtk
 
 run: $(TARGET)
 	mpiexec -np 4 ./$(TARGET)

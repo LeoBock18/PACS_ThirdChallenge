@@ -7,7 +7,8 @@
 #include<ctime>
 #include"jacobi.cpp"
 #include"densemat.cpp"
-//#include"chrono.hpp"
+#include"chrono.hpp"
+#include"writeVTK.hpp"
 
 using Matrix = la::dense_matrix;
 using Real = double;
@@ -23,15 +24,15 @@ int main(int argc, char* argv[])
 
     Real pi = M_PI;
     std::size_t n_max = 5000;
-    std::size_t n = 101;
+    std::size_t n = 501;
     Real tol = 1e-5;
     std::function< Real (Real_vec) > f = [pi](auto const & x){return 8*pi*pi*std::sin(2*pi*x[0])*std::sin(2*pi*x[1]);};
     std::function< Real (Real_vec) > u_ex = [pi](auto const & x){return std::sin(2*pi*x[0])*std::sin(2*pi*x[1]);};
 
-    //Timings::Chrono clock;
-    //clock.start();
+    Timings::Chrono clock;
+    clock.start();
     Matrix res = jacobi::solve(n, f, tol, n_max);
-    //clock.stop();
+    clock.stop();
 
     double h = 1./(n-1);
     if(rank == 0)
@@ -46,9 +47,11 @@ int main(int argc, char* argv[])
         }
         err_ex *= h;
         err_ex = sqrt(err_ex);
-        std::cout << "Result:\n" << res << std::endl;
+        //std::cout << "Result:\n" << res << std::endl;
         std::cout << "\nError: " << err_ex << std::endl;
-        //std::cout << clock << std::endl;
+        std::cout << clock << std::endl;
+
+        generateVTKFile("out.vtk", res, n, h);
     }
 
     MPI_Finalize();
