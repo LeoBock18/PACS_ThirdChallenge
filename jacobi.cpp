@@ -1,11 +1,11 @@
 #include"jacobi.hpp"
-#include<functional>
-#include<vector>
-#include<cmath>
+#include"densemat.hpp"
 
 using Matrix = la::dense_matrix;
 
-Matrix jacobi::solve(int n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_max)
+namespace jacobi{
+
+Matrix solve(int n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_max)
 {
     int rank,size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -72,7 +72,7 @@ Matrix jacobi::solve(int n, std::function< Real (Real_vec) > f, Real tol, std::s
     Matrix reference_mat = local_mat;
     while( !all_stop and n_iter < n_max )
     {
-        new_mat = reference_mat;
+        Matrix new_mat = reference_mat;
         // Adjacent rows passing
         // Initialization
         std::vector<Real> upper_row(n,0);
@@ -81,23 +81,23 @@ Matrix jacobi::solve(int n, std::function< Real (Real_vec) > f, Real tol, std::s
         // Sending lower row
         if(rank != size-1)
         {
-            MPI_Send(local_mat.row(recv_counts[rank]-1).data(), n, MPI_DOUBLE, rank+1, rank, MPI_COMM_WORLD);
+            MPI_Send(local_mat.extract_row(recv_counts[rank]-1).data(), n, MPI_DOUBLE, rank+1, rank, MPI_COMM_WORLD);
         }
         // Receiving lower row (from rank pov, it is upper row)
         if(rank != 0)
         {
-            MPI_Recv(upper_row.data(), n, MPI_DOUBLE, rank-1, rank-1, MPI_COMM_WORLD, MPI_STATUS_IGNORED);
+            MPI_Recv(upper_row.data(), n, MPI_DOUBLE, rank-1, rank-1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
 
         // Sending upper row
         if(rank != 0)
         {
-            MPI_Send(local_mat.row(0).data(), n, MPI_DOUBLE, rank-1, rank, MPI_COMM_WORLD);
+            MPI_Send(local_mat.extract_row(0).data(), n, MPI_DOUBLE, rank-1, rank, MPI_COMM_WORLD);
         }
         // Receiving upper row (from rank pov, it is lower row)
         if(rank != size-1)
         {
-            MPI_Recv(lower_row.data(), n, MPI_DOUBLE, rank+1, rank+1, MPI_COMM_WORLD, MPI_STATUS_IGNORED);
+            MPI_Recv(lower_row.data(), n, MPI_DOUBLE, rank+1, rank+1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
 
         // Jacobi iteration (common to all ranks)
@@ -140,7 +140,7 @@ Matrix jacobi::solve(int n, std::function< Real (Real_vec) > f, Real tol, std::s
             err *= h;
             err = sqrt(err);
         }
-        elseif(rank == 0)
+        else if(rank == 0)
         {
             for(std::size_t i = 1; i < recv_counts[rank]; ++i)
             {
@@ -152,7 +152,7 @@ Matrix jacobi::solve(int n, std::function< Real (Real_vec) > f, Real tol, std::s
             err *= h;
             err = sqrt(err);
         }
-        elseif(rank == size-1)
+        else if(rank == size-1)
         {
             for(std::size_t i = 0; i < recv_counts[rank]-1; ++i)
             {
@@ -182,5 +182,7 @@ Matrix jacobi::solve(int n, std::function< Real (Real_vec) > f, Real tol, std::s
     Matrix res(n,n);
     MPI_Gatherv(local_mat.data(), recv_counts[rank], MPI_DOUBLE, res.data(), recv_counts.data(), displ.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    return res;    
+    return res;
 }
+
+} // end of namespace jacobi

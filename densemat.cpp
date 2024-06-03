@@ -1,5 +1,6 @@
 #include <sstream>
 #include <string>
+#include<iostream>
 #include "densemat.hpp"
 
 namespace la
@@ -78,6 +79,16 @@ namespace la
     return m_columns;
   }
 
+  dense_matrix::container_type
+  dense_matrix::extract_row(size_type i) const
+  {
+    // I use the assign method and the iterator arithmetic valid for iterators to
+    // vectors
+    container_type curr_row;
+    curr_row.assign(m_data.cbegin() + sub2ind(i, 0), m_data.cbegin() + sub2ind(i + 1, 0));
+    return curr_row;
+  }
+
   dense_matrix
   dense_matrix::transposed (void) const
   {
@@ -122,4 +133,16 @@ namespace la
   {
     A.swap (B);
   }
+
+  std::ostream&
+  operator<<(std::ostream& os, const dense_matrix& matrix) {
+    for (int i = 0; i < matrix.m_rows; ++i) {
+        for (int j = 0; j < matrix.m_columns; ++j) {
+            os << matrix(i, j) << ' ';
+        }
+        os << '\n';
+    }
+    return os;
+}
+
 }

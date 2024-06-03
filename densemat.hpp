@@ -3,6 +3,7 @@
 
 #include <istream>
 #include <vector>
+#include<iostream>
 
 namespace la // Linear Algebra
 {
@@ -49,6 +50,9 @@ namespace la // Linear Algebra
     size_type
     columns (void) const;
 
+    container_type
+    extract_row(size_type i) const;
+
     dense_matrix
     transposed (void) const;
 
@@ -56,6 +60,8 @@ namespace la // Linear Algebra
     data (void);
     const_pointer
     data (void) const;
+
+    friend std::ostream& operator<<(std::ostream& os, const dense_matrix& matrix);
   };
 
   dense_matrix
@@ -63,6 +69,10 @@ namespace la // Linear Algebra
 
   void
   swap (dense_matrix &, dense_matrix &);
+
+  std::ostream&
+  operator<<(std::ostream& os, const dense_matrix& matrix);
+
 }
 
 #endif // DENSE_MATRIX_HH

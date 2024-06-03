@@ -2,8 +2,12 @@
 #define PARALLEL_JACOBI_METHOD_HPP
 
 #include<iostream>
-#include"densemat.hpp"
+#include<array>
+#include<functional>
+#include<vector>
+#include<cmath>
 #include<mpi.h>
+#include"densemat.hpp"
 
 namespace jacobi
 {
