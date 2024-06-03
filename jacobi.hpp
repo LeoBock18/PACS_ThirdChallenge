@@ -2,7 +2,7 @@
 #define PARALLEL_JACOBI_METHOD_HPP
 
 #include<iostream>
-#include"MyMat0.hpp"
+#include"densemat.hpp"
 #include<mpi.h>
 
 namespace jacobi
@@ -11,7 +11,7 @@ namespace jacobi
 using Real = double;
 using Real_vec = std::array<Real,2>;
 
-LinearAlgebra::MyMat0<Real, ROWMAJOR> solve(int, std::function< Real (Real_vec) >, Real, std::size_t);
+la::dense_matrix solve(int, std::function< Real (Real_vec) >, Real, std::size_t);
         
 
 } // namespace jacobi

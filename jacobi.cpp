@@ -1,8 +1,9 @@
 #include"jacobi.hpp"
 #include<functional>
 #include<vector>
+#include<cmath>
 
-using Matrix = LinearAlgebra::MyMat0<Real, ROWMAJOR>;
+using Matrix = la::dense_matrix;
 
 Matrix jacobi::solve(int n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_max)
 {
@@ -25,8 +26,8 @@ Matrix jacobi::solve(int n, std::function< Real (Real_vec) > f, Real tol, std::s
     }
     
     // Construct local matrices and rhs
-    Matrix local_mat(recv_counts[rank], n, 0);
-    Matrix local_f(recv_counts[rank],n);
+    Matrix local_mat(recv_counts[rank], n, 0.);
+    Matrix local_f(recv_counts[rank], n);
 
     // Construct domain nodes (1D)
     std::vector<Real> x(n);
@@ -68,9 +69,10 @@ Matrix jacobi::solve(int n, std::function< Real (Real_vec) > f, Real tol, std::s
     
     std::size_t n_iter{0};
     bool all_stop = false;
-    Matrix new_mat(recv_counts[rank], n, 0);
+    Matrix reference_mat = local_mat;
     while( !all_stop and n_iter < n_max )
     {
+        new_mat = reference_mat;
         // Adjacent rows passing
         // Initialization
         std::vector<Real> upper_row(n,0);
@@ -111,7 +113,7 @@ Matrix jacobi::solve(int n, std::function< Real (Real_vec) > f, Real tol, std::s
         {
             for(std::size_t j = 1; j < n-1; ++j)
             {
-                new_mat(0,j) += 0.25 * upper_row[j];
+                new_mat(0,j) += 0.25 * (upper_row[j] + local_mat(1,j) + local_mat(0,j-1) + local_mat(0,j+1) + h*h*local_f(0,j));
             }
         }
         // Jacobi iteration (adding lower row)
@@ -119,12 +121,66 @@ Matrix jacobi::solve(int n, std::function< Real (Real_vec) > f, Real tol, std::s
         {
             for(std::size_t j = 1; j < n-1; ++j)
             {
-                new_mat(recv_counts[rank]-1,j) += 0.25 * lower_row[j];
+                std::size_t curr_row = recv_counts[rank]-1;
+                new_mat(curr_row,j) +=  0.25 * (local_mat(curr_row-1,j) + lower_row[j] + local_mat(curr_row,j-1) + local_mat(curr_row,j+1) + h*h*local_f(curr_row,j));
             }
         }
 
+        // Compute local error
+        Real err{0};
+        if(rank != 0 and rank != size-1)
+        {
+            for(std::size_t i = 0; i < recv_counts[rank]; ++i)
+            {
+                for(std::size_t j = 1; j < n-1; ++j)
+                {
+                    err += (new_mat(i,j) - local_mat(i,j)) * (new_mat(i,j) - local_mat(i,j));
+                }
+            }
+            err *= h;
+            err = sqrt(err);
+        }
+        elseif(rank == 0)
+        {
+            for(std::size_t i = 1; i < recv_counts[rank]; ++i)
+            {
+                for(std::size_t j = 1; j < n-1; ++j)
+                {
+                    err += (new_mat(i,j) - local_mat(i,j)) * (new_mat(i,j) - local_mat(i,j));
+                }
+            }
+            err *= h;
+            err = sqrt(err);
+        }
+        elseif(rank == size-1)
+        {
+            for(std::size_t i = 0; i < recv_counts[rank]-1; ++i)
+            {
+                for(std::size_t j = 1; j < n-1; ++j)
+                {
+                    err += (new_mat(i,j) - local_mat(i,j)) * (new_mat(i,j) - local_mat(i,j));
+                }
+            }
+            err *= h;
+            err = sqrt(err);
+        }
+
+        // Upgrade local matrix
+        la::swap(local_mat,new_mat);
+        
+        // Pick the max among the errors, change flag if all errors below tolerance
+        MPI_Allreduce(MPI_IN_PLACE, &err, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        if(err < tol)
+        {
+            all_stop = true;
+        }
+        // Increase number of iteration
+        ++n_iter;
     }
+    
+    // Build global matrix
+    Matrix res(n,n);
+    MPI_Gatherv(local_mat.data(), recv_counts[rank], MPI_DOUBLE, res.data(), recv_counts.data(), displ.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-
-
+    return res;    
 }
