@@ -7,6 +7,7 @@
 #include<vector>
 #include<cmath>
 #include<mpi.h>
+#include<omp.h>
 #include"densemat.hpp"
 
 namespace jacobi

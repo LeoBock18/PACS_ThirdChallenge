@@ -4,6 +4,7 @@
 #include<vector>
 #include<cmath>
 #include<mpi.h>
+#include<omp.h>
 #include<ctime>
 #include"jacobi.cpp"
 #include"densemat.cpp"
@@ -16,7 +17,14 @@ using Real_vec = std::array<Real,2>;
 
 int main(int argc, char* argv[])
 {
-    MPI_Init(&argc, &argv);
+    int provided;
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+
+    if(MPI_THREAD_SERIALIZED < provided)
+    {
+        std::cout << "The required thread support is not available" << std::endl;
+        return 1;
+    }
 
     int rank,size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -24,7 +32,7 @@ int main(int argc, char* argv[])
 
     Real pi = M_PI;
     std::size_t n_max = 5000;
-    std::size_t n = 501;
+    std::size_t n = 11;
     Real tol = 1e-5;
     std::function< Real (Real_vec) > f = [pi](auto const & x){return 8*pi*pi*std::sin(2*pi*x[0])*std::sin(2*pi*x[1]);};
     std::function< Real (Real_vec) > u_ex = [pi](auto const & x){return std::sin(2*pi*x[0])*std::sin(2*pi*x[1]);};
@@ -47,7 +55,7 @@ int main(int argc, char* argv[])
         }
         err_ex *= h;
         err_ex = sqrt(err_ex);
-        //std::cout << "Result:\n" << res << std::endl;
+        std::cout << "Result:\n" << res << std::endl;
         std::cout << "\nError: " << err_ex << std::endl;
         std::cout << clock << std::endl;
 

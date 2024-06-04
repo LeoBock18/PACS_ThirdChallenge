@@ -11,7 +11,6 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    
     double h = 1./(n-1);
     // Split number of rows (remainers among first processes)
     //int local_rows = (n % size < rank) ? n/size : n/size+1;
@@ -71,10 +70,9 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
     
     std::size_t n_iter{0};
     bool all_stop = false;
-    Matrix reference_mat = local_mat;
+    Matrix new_mat = local_mat;
     while( !all_stop and n_iter < n_max )
     {
-        Matrix new_mat = reference_mat;
         // Adjacent rows passing
         // Initialization
         std::vector<Real> upper_row(n,0);
@@ -108,33 +106,36 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
         
 
         // Jacobi iteration (common to all ranks)
+#pragma omp parallel for shared(new_mat)
         for(std::size_t i = 1; i < local_rows-1; ++i)
         {
             for(std::size_t j = 1; j < n-1; ++j)
             {
-                new_mat(i,j) += 0.25 * (local_mat(i-1,j) + local_mat(i+1,j) + local_mat(i,j-1) + local_mat(i,j+1) + h*h*local_f(i,j));
+                new_mat(i,j) = 0.25 * (local_mat(i-1,j) + local_mat(i+1,j) + local_mat(i,j-1) + local_mat(i,j+1) + h*h*local_f(i,j));
             }
         }
         // Jacobi iteration (adding upper row)
         if(rank != 0)
         {
+#pragma omp parallel for shared(new_mat)
             for(std::size_t j = 1; j < n-1; ++j)
             {
-                new_mat(0,j) += 0.25 * (upper_row[j] + local_mat(1,j) + local_mat(0,j-1) + local_mat(0,j+1) + h*h*local_f(0,j));
+                new_mat(0,j) = 0.25 * (upper_row[j] + local_mat(1,j) + local_mat(0,j-1) + local_mat(0,j+1) + h*h*local_f(0,j));
             }
         }
         // Jacobi iteration (adding lower row)
         if(rank != size-1)
         {
+#pragma omp parallel for shared(new_mat)
             for(std::size_t j = 1; j < n-1; ++j)
             {
                 std::size_t curr_row = local_rows-1;
-                new_mat(curr_row,j) +=  0.25 * (local_mat(curr_row-1,j) + lower_row[j] + local_mat(curr_row,j-1) + local_mat(curr_row,j+1) + h*h*local_f(curr_row,j));
+                new_mat(curr_row,j) =  0.25 * (local_mat(curr_row-1,j) + lower_row[j] + local_mat(curr_row,j-1) + local_mat(curr_row,j+1) + h*h*local_f(curr_row,j));
             }
         }
 
         // Compute local error
-        Real err{0};
+        Real err{0.};
         if(rank != 0 and rank != size-1)
         {
             for(std::size_t i = 0; i < local_rows; ++i)

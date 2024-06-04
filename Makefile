@@ -1,7 +1,7 @@
 MPICXX ?= mpic++
 CXXFLAGS ?= -std=c++20 -O3
 CPPFLAGS ?= -fopenmp -I. -I${PACS_ROOT}/include -DNDEBUG
-LDLIBS += -L${PACS_ROOT}/lib -lpacs
+LDLIBS += -L${PACS_ROOT}/lib -lpacs -lmuparser
 LDFLAGS ?=
 TARGET = main
 
@@ -18,4 +18,4 @@ distclean: clean
 	$(RM) $(TARGET) *.vtk
 
 run: $(TARGET)
-	mpiexec -np 4 ./$(TARGET)
+	mpiexec -np 4 -x OMP_NUM_THREADS = 2 ./$(TARGET)
