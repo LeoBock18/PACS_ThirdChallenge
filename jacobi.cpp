@@ -5,7 +5,7 @@ using Matrix = la::dense_matrix;
 
 namespace jacobi{
 
-Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_max)
+Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_max, std::function< Real (Real_vec) > dir_bc)
 {
     int rank,size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -13,7 +13,6 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
 
     double h = 1./(n-1);
     // Split number of rows (remainers among first processes)
-    //int local_rows = (n % size < rank) ? n/size : n/size+1;
 
     // Evaluate number of local elements stored by each process and displacement (remainers among first processes)
     int local_rows = (n % size <= rank) ? n/size : n/size+1;
@@ -37,43 +36,52 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
         x[i] = h*i;
     }
 
-    // Force matrix (put it in other loop if extra of dirichlet)
+    // Boundary conditions along y and force matrix
     for(std::size_t i = 0; i < local_rows; ++i)
     {
+        // local to global row index
+        std::size_t curr_row = displ[rank]/n + i;
+        // Boundary conditions allocation
+        local_mat(i,0) = dir_bc({x[curr_row],x[0]});
+        local_mat(i,n-1) = dir_bc({x[curr_row],x[n-1]});
+        // Force matrix allocation
         for(std::size_t j = 0; j < n; ++j)
         {
-            std::size_t curr_row = displ[rank]/n + i;
             local_f(i,j) = f({x[curr_row],x[j]});
         }
     }
 
-/*
-    // Boundary conditions along y
-    for(std::size_t i = 0; i < recv_counts[rank]; ++i)
-    {
-        std::size_t curr_row = displ[rank] + i;
-        local_mat(i,0) = g_dir({x[curr_row],x[0]});
-        local_mat(i,n-1) = g_dir({x[curr_row],x[n-1]});
-    }
-
     // Boundary Conditions along x (only first and last rank)
-    if(rank == 0 or rank == size)
+    if(rank == 0)
     {
-        std::size_t boundary_row = (rank == 0) ? 0 : local_rows-1;
-        for(std:size_t j = 1; j < n-1; ++j)
+        // Indicate which row of boundary conditions we are considering
+        //std::size_t boundary_row = (rank == 0) ? 0 : local_rows-1;
+        //double local_to_global = (rank == 0) ? 0 : 1;
+        for(std::size_t j = 1; j < n-1; ++j)
         {
-            local_mat(boundary_row,j) = g_dir({x[boundary_row],x[j]});
+            local_mat(0,j) = dir_bc({x[0],x[j]});
         }
     }
+
+    if(rank == size-1)
+    {
+        for(std::size_t j = 1; j < n-1; ++j)
+        {
+            local_mat(local_rows-1,j) = dir_bc({x[n-1],x[j]});
+        }
+    }   
+
     MPI_Barrier(MPI_COMM_WORLD);
-*/
-    
+
+    // Initialize loop flag variables
     std::size_t n_iter{0};
     bool all_stop = false;
+    // Initialize matrix for loop implementation
     Matrix new_mat = local_mat;
+    // Jacobi algorithm loop
     while( !all_stop and n_iter < n_max )
     {
-        // Initialization
+        // Initialization of vectors for message passing
         std::vector<Real> upper_row(n,0);
         std::vector<Real> lower_row(n,0);
 
@@ -104,7 +112,7 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
         MPI_Barrier(MPI_COMM_WORLD);
         
 
-        // Jacobi iteration (common to all ranks)
+        // Jacobi iteration (common to all ranks), with hybridization
 #pragma omp parallel for shared(new_mat)
         for(std::size_t i = 1; i < local_rows-1; ++i)
         {
@@ -135,6 +143,7 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
 
         // Compute local error
         Real err{0.};
+        // If internal ranks, also first and last rows to be considered
         if(rank != 0 and rank != size-1)
         {
             for(std::size_t i = 0; i < local_rows; ++i)
@@ -147,6 +156,7 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
             err *= h;
             err = sqrt(err);
         }
+        // If first or last ranks, do not consider boundary rows
         else if(rank == 0)
         {
             for(std::size_t i = 1; i < local_rows; ++i)

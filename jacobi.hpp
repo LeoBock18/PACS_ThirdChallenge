@@ -16,7 +16,7 @@ namespace jacobi
 using Real = double;
 using Real_vec = std::array<Real,2>;
 
-la::dense_matrix solve(std::size_t, std::function< Real (Real_vec) >, Real, std::size_t);
+la::dense_matrix solve(std::size_t, std::function< Real (Real_vec) >, Real, std::size_t, std::function< Real (Real_vec) >);
         
 
 } // namespace jacobi

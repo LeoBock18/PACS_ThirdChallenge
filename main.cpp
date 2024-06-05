@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 {
     int provided;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
-    //MPI_Init(&argc, &argv);
+
 
     if(MPI_THREAD_MULTIPLE < provided)
     {
@@ -33,14 +33,15 @@ int main(int argc, char* argv[])
 
     Real pi = M_PI;
     std::size_t n_max = 5000;
-    std::size_t n = 101;
+    std::size_t n = 11;
     Real tol = 1e-5;
     std::function< Real (Real_vec) > f = [pi](auto const & x){return 8*pi*pi*std::sin(2*pi*x[0])*std::sin(2*pi*x[1]);};
-    std::function< Real (Real_vec) > u_ex = [pi](auto const & x){return std::sin(2*pi*x[0])*std::sin(2*pi*x[1]);};
+    std::function< Real (Real_vec) > u_ex = [pi](auto const & x){return std::sin(2*pi*x[0])*std::sin(2*pi*x[1])+x[0]+x[1];};
+    std::function< Real (Real_vec) > dir_bc = [pi](auto const & x){return x[0] + x[1];};
 
     Timings::Chrono clock;
     clock.start();
-    Matrix res = jacobi::solve(n, f, tol, n_max);
+    Matrix res = jacobi::solve(n, f, tol, n_max, dir_bc);
     clock.stop();
 
     double h = 1./(n-1);
@@ -56,7 +57,7 @@ int main(int argc, char* argv[])
         }
         err_ex *= h;
         err_ex = sqrt(err_ex);
-        //std::cout << "Result:\n" << res << std::endl;
+        std::cout << "Result:\n" << res << std::endl;
         std::cout << "\nError: " << err_ex << std::endl;
         std::cout << clock << std::endl;
 
