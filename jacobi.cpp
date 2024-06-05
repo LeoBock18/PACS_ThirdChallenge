@@ -73,7 +73,6 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
     Matrix new_mat = local_mat;
     while( !all_stop and n_iter < n_max )
     {
-        // Adjacent rows passing
         // Initialization
         std::vector<Real> upper_row(n,0);
         std::vector<Real> lower_row(n,0);

@@ -18,4 +18,4 @@ distclean: clean
 	$(RM) $(TARGET) *.vtk
 
 run: $(TARGET)
-	mpiexec -np 4 -x OMP_NUM_THREADS = 2 ./$(TARGET)
+	mpiexec -np 4 -x OMP_NUM_THREADS=2 ./$(TARGET)
