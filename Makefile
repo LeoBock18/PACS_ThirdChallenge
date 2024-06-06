@@ -1,7 +1,8 @@
+# Variables
 MPICXX ?= mpic++
 CXXFLAGS ?= -std=c++20 -O3
-CPPFLAGS ?= -fopenmp -I. -I${PACS_ROOT}/include -DNDEBUG
-LDLIBS += -L${PACS_ROOT}/lib -lpacs -lmuparser
+CPPFLAGS ?= -fopenmp -I. -I${PACS_ROOT}/include -I.${PACS_ROOT}/src/muParserInterface/ -DNDEBUG
+LDLIBS ?= 
 LDFLAGS ?=
 TARGET = main
 
@@ -18,4 +19,4 @@ distclean: clean
 	$(RM) $(TARGET) *.vtk
 
 run: $(TARGET)
-	mpiexec -np 4 -x OMP_NUM_THREADS=2 ./$(TARGET)
+	mpiexec -np 4 -x OMP_NUM_THREADS=2 ./$(TARGET) $(ARGS)

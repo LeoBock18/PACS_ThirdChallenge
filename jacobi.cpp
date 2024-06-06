@@ -1,5 +1,4 @@
 #include"jacobi.hpp"
-#include"densemat.hpp"
 
 using Matrix = la::dense_matrix;
 

@@ -2,6 +2,8 @@
 #include<array>
 #include<functional>
 #include<vector>
+#include <string>
+#include <fstream>
 #include<cmath>
 #include<mpi.h>
 #include<omp.h>
@@ -18,30 +20,55 @@ using Real_vec = std::array<Real,2>;
 int main(int argc, char* argv[])
 {
     int provided;
+    // Initialize MPI (thread because of hybridization)
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
 
-
+    // Check if required support is available
     if(MPI_THREAD_MULTIPLE < provided)
     {
         std::cerr << "The required thread support is not available" << std::endl;
         return 1;
     }
 
+    // Initialize rank and size
     int rank,size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    Real pi = M_PI;
-    std::size_t n_max = 5000;
+    if (argc != 4) {
+        std::cerr << "Usage: " << argv[0] << " <a> <b> <c>" << std::endl;
+        return 1;
+    }
+
+    std::size_t n = std::stoul(argv[1]);
+    std::size_t max_it = std::stoul(argv[2]); // Convert to std::size_t using std::stoul
+    Real tol = std::atof(argv[3]);
+
+/*
+    std::ifstream f("data.json");
+    json data = json::parse(f);
+    muParserInterface func;
+
+    std::string funString = data.value("fun","");
+    const unsigned int max_it =  data.value("max_it",500);
+    const double n = data.value("n", 11);
+    const double tol = data.value("tol", 1e-4);
+
+    func.set_expression(funString);
+*/
+/*
     std::size_t n = 11;
+    std::size_t max_it = 5000;
     Real tol = 1e-5;
-    std::function< Real (Real_vec) > f = [pi](auto const & x){return 8*pi*pi*std::sin(2*pi*x[0])*std::sin(2*pi*x[1]);};
-    std::function< Real (Real_vec) > u_ex = [pi](auto const & x){return std::sin(2*pi*x[0])*std::sin(2*pi*x[1])+x[0]+x[1];};
-    std::function< Real (Real_vec) > dir_bc = [pi](auto const & x){return x[0] + x[1];};
+    */
+    std::function< Real (Real_vec) > f = [](auto const & x){return 8*M_PI*M_PI*std::sin(2*M_PI*x[0])*std::sin(2*M_PI*x[1]);};
+    std::function< Real (Real_vec) > u_ex = [](auto const & x){return std::sin(2*M_PI*x[0])*std::sin(2*M_PI*x[1])+x[0]+x[1];};
+    std::function< Real (Real_vec) > dir_bc = [](auto const & x){return x[0] + x[1];};
+    
 
     Timings::Chrono clock;
     clock.start();
-    Matrix res = jacobi::solve(n, f, tol, n_max, dir_bc);
+    Matrix res = jacobi::solve(n, f, tol, max_it, dir_bc);
     clock.stop();
 
     double h = 1./(n-1);
