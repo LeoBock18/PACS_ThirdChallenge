@@ -8,8 +8,8 @@
 #include<mpi.h>
 #include<omp.h>
 #include<ctime>
-#include"jacobi.cpp"
-#include"densemat.cpp"
+#include"jacobi.hpp"
+#include"densemat.hpp"
 #include"chrono.hpp"
 #include"writeVTK.hpp"
 
@@ -35,14 +35,17 @@ int main(int argc, char* argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <a> <b> <c>" << std::endl;
+    if (argc != 5) {
+        std::cerr << "ERROR in number of input parameters. Please enter exactly 4 parameters" << std::endl;
         return 1;
     }
 
+    // Initialize problem parameters (taken from command line)
     std::size_t n = std::stoul(argv[1]);
     std::size_t max_it = std::stoul(argv[2]); // Convert to std::size_t using std::stoul
     Real tol = std::atof(argv[3]);
+    int file_number = std::stoi(argv[4]);
+    
 
 /*
     std::ifstream f("data.json");
@@ -84,11 +87,11 @@ int main(int argc, char* argv[])
         }
         err_ex *= h;
         err_ex = sqrt(err_ex);
-        std::cout << "Result:\n" << res << std::endl;
         std::cout << "\nError: " << err_ex << std::endl;
         std::cout << clock << std::endl;
+        std::cout << std::endl;
 
-        generateVTKFile("out.vtk", res, n, h);
+        generateVTKFile("test/out" + std::to_string(file_number) + ".vtk", res, n, h);
     }
 
     MPI_Finalize();

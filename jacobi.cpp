@@ -190,7 +190,9 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
         {
             all_stop = true;
             if(rank == 0)
-                std::cout << n_iter << std::endl;
+            {
+                std::cout << "Number of iterations= " << n_iter;
+            }
         }
         // Increase number of iteration
         ++n_iter;
