@@ -4,45 +4,45 @@ TEST 1: Running with n=51, max_it=5000, tol=1e-6
 SERIAL SOLVER
 Number of iterations= 4725
 Error: 0.00468363
-Elapsed Time= 1.876076e+05 microsec
+Elapsed Time= 1.991281e+05 microsec
 
 
 2 CORES and 1 THREADS
 Number of iterations= 4560
 Error: 0.00470866
-Elapsed Time= 1.300003e+05 microsec
+Elapsed Time= 1.766179e+05 microsec
 
 
 4 CORES and 1 THREADS
 Number of iterations= 4511
 Error: 0.00471977
-Elapsed Time= 1.175092e+05 microsec
+Elapsed Time= 1.064940e+05 microsec
 
 
 4 CORES and 2 THREADS
 Number of iterations= 4511
 Error: 0.00471977
-Elapsed Time= 1.840228e+05 microsec
+Elapsed Time= 1.445168e+05 microsec
 
 
 =================================
-TEST 1: Running with n=101, max_it=10000, tol=1e-6
+TEST 1: Running with n=101, max_it=40000, tol=1e-5
 2 CORES and 1 THREADS
-
-Error: 0.0582616
-Elapsed Time= 9.120912e+05 microsec
+Number of iterations= 11457
+Error: 0.0284063
+Elapsed Time= 1.105239e+06 microsec
 
 
 4 CORES and 1 THREADS
-
-Error: 0.0582616
-Elapsed Time= 6.542532e+05 microsec
+Number of iterations= 11246
+Error: 0.0315142
+Elapsed Time= 8.590221e+05 microsec
 
 
 4 CORES and 2 THREADS
-
-Error: 0.0582616
-Elapsed Time= 6.219595e+05 microsec
+Number of iterations= 11246
+Error: 0.0315142
+Elapsed Time= 9.667600e+05 microsec
 
 
 =================================

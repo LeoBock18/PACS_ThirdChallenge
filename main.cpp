@@ -1,3 +1,11 @@
+/**
+ * @file main.cpp
+ * @author Leonardo Bocchieri (leonardo.bocchieri@mail.polimi.it)
+ * @brief main for solving laplacian problem with Dirichlet boundary conditions using Jacobi algorithm
+ * @date 2024-06-06
+ * 
+ */
+
 #include<iostream>
 #include<array>
 #include<functional>
@@ -35,6 +43,7 @@ int main(int argc, char* argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
+    // Rase error if not right number of input parameters on command line
     if (argc != 5) {
         std::cerr << "ERROR in number of input parameters. Please enter exactly 4 parameters" << std::endl;
         return 1;
@@ -45,7 +54,6 @@ int main(int argc, char* argv[])
     std::size_t max_it = std::stoul(argv[2]); // Convert to std::size_t using std::stoul
     Real tol = std::atof(argv[3]);
     int file_number = std::stoi(argv[4]);
-    
 
 /*
     std::ifstream f("data.json");
@@ -59,21 +67,18 @@ int main(int argc, char* argv[])
 
     func.set_expression(funString);
 */
-/*
-    std::size_t n = 11;
-    std::size_t max_it = 5000;
-    Real tol = 1e-5;
-    */
+    // Initialize functions of the problem
     std::function< Real (Real_vec) > f = [](auto const & x){return 8*M_PI*M_PI*std::sin(2*M_PI*x[0])*std::sin(2*M_PI*x[1]);};
     std::function< Real (Real_vec) > u_ex = [](auto const & x){return std::sin(2*M_PI*x[0])*std::sin(2*M_PI*x[1])+x[0]+x[1];};
     std::function< Real (Real_vec) > dir_bc = [](auto const & x){return x[0] + x[1];};
     
-
+    // Use chrono utilities for evaluating time for computation
     Timings::Chrono clock;
     clock.start();
     Matrix res = jacobi::solve(n, f, tol, max_it, dir_bc);
     clock.stop();
 
+    // Compute L2-error of numerical solution (only rank 0)
     double h = 1./(n-1);
     if(rank == 0)
     {
@@ -87,10 +92,12 @@ int main(int argc, char* argv[])
         }
         err_ex *= h;
         err_ex = sqrt(err_ex);
+        // Print results
         std::cout << "\nError: " << err_ex << std::endl;
         std::cout << clock << std::endl;
         std::cout << std::endl;
 
+        // Save numerical result in vtk file
         generateVTKFile("test/out" + std::to_string(file_number) + ".vtk", res, n, h);
     }
 

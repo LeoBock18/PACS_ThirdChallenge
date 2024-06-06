@@ -10,9 +10,10 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
+    // Evaluate subintervals length
     double h = 1./(n-1);
-    // Split number of rows (remainers among first processes)
 
+    // Split number of rows (remainers among first processes)
     // Evaluate number of local elements stored by each process and displacement (remainers among first processes)
     int local_rows = (n % size <= rank) ? n/size : n/size+1;
     std::vector<int> recv_counts(size,0), displ(size,0);
@@ -120,7 +121,7 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
                 new_mat(i,j) = 0.25 * (local_mat(i-1,j) + local_mat(i+1,j) + local_mat(i,j-1) + local_mat(i,j+1) + h*h*local_f(i,j));
             }
         }
-        // Jacobi iteration (adding upper row)
+        // Jacobi iteration (adding upper row), with hybridization
         if(rank != 0)
         {
 #pragma omp parallel for shared(new_mat)
@@ -129,7 +130,7 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
                 new_mat(0,j) = 0.25 * (upper_row[j] + local_mat(1,j) + local_mat(0,j-1) + local_mat(0,j+1) + h*h*local_f(0,j));
             }
         }
-        // Jacobi iteration (adding lower row)
+        // Jacobi iteration (adding lower row), with hybridization
         if(rank != size-1)
         {
 #pragma omp parallel for shared(new_mat)
@@ -202,6 +203,7 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
     Matrix res(n,n);
     MPI_Gatherv(local_mat.data(), local_rows*n, MPI_DOUBLE, res.data(), recv_counts.data(), displ.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
+    // Return the result
     return res;
 }
 

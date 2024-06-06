@@ -4,7 +4,7 @@ CXXFLAGS ?= -std=c++20 -O3
 CPPFLAGS ?= -fopenmp -I. -I${PACS_ROOT}/include -I.${PACS_ROOT}/src/muParserInterface/ -DNDEBUG
 LDLIBS ?= 
 LDFLAGS ?=
-TARGET = main
+TARGET = main.exe
 SOURCES = main.cpp jacobi.cpp densemat.cpp
 HEADERS = jacobi.hpp densemat.hpp writeVTK.hpp
 OBJECTS = $(SOURCES:.cpp=.o)
