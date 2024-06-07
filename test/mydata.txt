@@ -1,48 +1,74 @@
 RESULTS OF MY TESTS
 =================================
-TEST 1: Running with n=51, max_it=5000, tol=1e-6
+TEST 1: Running with n=51, max_it=10000, tol=5e-7
 SERIAL SOLVER
-Number of iterations= 4725
-Error: 0.00468363
-Elapsed Time= 1.991281e+05 microsec
+Number of iterations= 5076
+Error: 0.00466311
+Elapsed Time= 2.484671e+05 microsec
 
 
 2 CORES and 1 THREADS
-Number of iterations= 4560
-Error: 0.00470866
-Elapsed Time= 1.766179e+05 microsec
+Number of iterations= 4911
+Error: 0.0046694
+Elapsed Time= 1.607209e+05 microsec
 
 
 4 CORES and 1 THREADS
-Number of iterations= 4511
-Error: 0.00471977
-Elapsed Time= 1.064940e+05 microsec
+Number of iterations= 4862
+Error: 0.00467221
+Elapsed Time= 1.411598e+05 microsec
 
 
 4 CORES and 2 THREADS
-Number of iterations= 4511
-Error: 0.00471977
-Elapsed Time= 1.445168e+05 microsec
+Number of iterations= 4862
+Error: 0.00467221
+Elapsed Time= 3.161624e+05 microsec
 
 
 =================================
-TEST 1: Running with n=101, max_it=40000, tol=1e-5
+TEST 2: Running with n=101, max_it=1e6, tol=5e-6
+SERIAL SOLVER
+Number of iterations= 13544
+Error: 0.0102564
+Elapsed Time= 2.392119e+06 microsec
+
+
 2 CORES and 1 THREADS
-Number of iterations= 11457
-Error: 0.0284063
-Elapsed Time= 1.105239e+06 microsec
+Number of iterations= 12861
+Error: 0.0142771
+Elapsed Time= 1.081688e+06 microsec
 
 
 4 CORES and 1 THREADS
-Number of iterations= 11246
-Error: 0.0315142
-Elapsed Time= 8.590221e+05 microsec
+Number of iterations= 12650
+Error: 0.0158243
+Elapsed Time= 9.247343e+05 microsec
 
 
 4 CORES and 2 THREADS
-Number of iterations= 11246
-Error: 0.0315142
-Elapsed Time= 9.667600e+05 microsec
+Number of iterations= 12650
+Error: 0.0158243
+Elapsed Time= 1.061670e+06 microsec
+
+
+=================================
+TEST 3: Running with n=401, max_it=10000000, tol=1e-4 (No Serial solver)
+2 CORES and 1 THREADS
+Number of iterations= 43365
+Error: 4.26042
+Elapsed Time= 6.050193e+07 microsec
+
+
+4 CORES and 1 THREADS
+Number of iterations= 39917
+Error: 4.74075
+Elapsed Time= 3.876814e+07 microsec
+
+
+4 CORES and 2 THREADS
+Number of iterations= 39917
+Error: 4.74075
+Elapsed Time= 3.390933e+07 microsec
 
 
 =================================

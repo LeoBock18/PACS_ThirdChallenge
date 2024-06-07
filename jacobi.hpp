@@ -39,7 +39,7 @@ using Real_vec = std::array<Real,2>;
  * @param dir_bc dirichlet boundary conditions function
  * @return matrix of solution in Cartesian grid
  */
-la::dense_matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_max, std::function< Real (Real_vec) > dir_bc);
+la::dense_matrix solve(std::size_t n, std::function< Real (Real, Real, Real) > f, Real tol, std::size_t n_max, std::function< Real (Real, Real, Real) > dir_bc);
         
 
 } // namespace jacobi

@@ -1,6 +1,8 @@
 {
-    "max_it" : 5000,
-    "n" : 21,
-    "tol" : 1e-8,
-    "fun" : "8*3.14*3.14*std::sin(2*3.14*x)*std::sin(2*3.14*y)"
+    "n" : 101,
+    "max_it" : 40000,
+    "tol" : 1e-5,
+    "fun" : "8*t*t*sin(2*t*x)*sin(2*t*y)",
+    "u_ex": "sin(2*t*x)*sin(2*t*y)+x+y",
+    "dir_bc": "x+y"
 }

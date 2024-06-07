@@ -1,10 +1,11 @@
 #include"jacobi.hpp"
+#include<cmath>
 
 using Matrix = la::dense_matrix;
 
 namespace jacobi{
 
-Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::size_t n_max, std::function< Real (Real_vec) > dir_bc)
+Matrix solve(std::size_t n, std::function< Real (Real, Real, Real) > f, Real tol, std::size_t n_max, std::function< Real (Real, Real, Real) > dir_bc)
 {
     int rank,size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -42,12 +43,12 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
         // local to global row index
         std::size_t curr_row = displ[rank]/n + i;
         // Boundary conditions allocation
-        local_mat(i,0) = dir_bc({x[curr_row],x[0]});
-        local_mat(i,n-1) = dir_bc({x[curr_row],x[n-1]});
+        local_mat(i,0) = dir_bc(M_PI,x[curr_row],x[0]);
+        local_mat(i,n-1) = dir_bc(M_PI,x[curr_row],x[n-1]);
         // Force matrix allocation
         for(std::size_t j = 0; j < n; ++j)
         {
-            local_f(i,j) = f({x[curr_row],x[j]});
+            local_f(i,j) = f(M_PI,x[curr_row],x[j]);
         }
     }
 
@@ -59,7 +60,7 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
         //double local_to_global = (rank == 0) ? 0 : 1;
         for(std::size_t j = 1; j < n-1; ++j)
         {
-            local_mat(0,j) = dir_bc({x[0],x[j]});
+            local_mat(0,j) = dir_bc(M_PI,x[0],x[j]);
         }
     }
 
@@ -67,7 +68,7 @@ Matrix solve(std::size_t n, std::function< Real (Real_vec) > f, Real tol, std::s
     {
         for(std::size_t j = 1; j < n-1; ++j)
         {
-            local_mat(local_rows-1,j) = dir_bc({x[n-1],x[j]});
+            local_mat(local_rows-1,j) = dir_bc(M_PI,x[n-1],x[j]);
         }
     }   
 

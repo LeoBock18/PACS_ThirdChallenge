@@ -20,11 +20,21 @@
 #include"densemat.hpp"
 #include"chrono.hpp"
 #include"writeVTK.hpp"
+#include "json.hpp"
+#include "muParserInterface.hpp"
 
+// Using namespaces
+using json = nlohmann::json;
+using namespace MuParserInterface;
 using Matrix = la::dense_matrix;
 using Real = double;
 using Real_vec = std::array<Real,2>;
 
+/**
+ * @brief main program for computing numerical solution of Laplace problem
+ * 
+ * @note Parameters are taken from data.json file if not written on the command line during execution
+ */
 int main(int argc, char* argv[])
 {
     int provided;
@@ -43,57 +53,68 @@ int main(int argc, char* argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    // Rase error if not right number of input parameters on command line
-    if (argc != 5) {
-        std::cerr << "ERROR in number of input parameters. Please enter exactly 4 parameters" << std::endl;
-        return 1;
-    }
-
-    // Initialize problem parameters (taken from command line)
-    std::size_t n = std::stoul(argv[1]);
-    std::size_t max_it = std::stoul(argv[2]); // Convert to std::size_t using std::stoul
-    Real tol = std::atof(argv[3]);
-    int file_number = std::stoi(argv[4]);
-
-/*
+    // Initialize json and muparser variables
     std::ifstream f("data.json");
     json data = json::parse(f);
-    muParserInterface func;
+    muParserInterface fun;
+    muParserInterface dir_bc;
+    muParserInterface u_ex;
 
+    // Read data from data.json
+    std::size_t n = data.value("n", 11);
+    std::size_t max_it =  data.value("max_it",500);
+    double tol = data.value("tol", 1e-4);
+    int file_number = 0; //Default file number for vtk file name
     std::string funString = data.value("fun","");
-    const unsigned int max_it =  data.value("max_it",500);
-    const double n = data.value("n", 11);
-    const double tol = data.value("tol", 1e-4);
+    std::string dirString = data.value("dir_bc","");
+    std::string uexString = data.value("u_ex","");
 
-    func.set_expression(funString);
-*/
-    // Initialize functions of the problem
-    std::function< Real (Real_vec) > f = [](auto const & x){return 8*M_PI*M_PI*std::sin(2*M_PI*x[0])*std::sin(2*M_PI*x[1]);};
-    std::function< Real (Real_vec) > u_ex = [](auto const & x){return std::sin(2*M_PI*x[0])*std::sin(2*M_PI*x[1])+x[0]+x[1];};
-    std::function< Real (Real_vec) > dir_bc = [](auto const & x){return x[0] + x[1];};
+    // Define functions with muparser method
+    fun.set_expression(funString);
+    dir_bc.set_expression(dirString);
+    u_ex.set_expression(uexString);
+
+    // If parameters given from command line, overwrite json ones
+    if (argc == 5) {
+        n = std::stoul(argv[1]); // Convert to std::size_t using std::stoul
+        max_it = std::stoul(argv[2]); // Convert to std::size_t using std::stoul
+        tol = std::atof(argv[3]);
+        file_number = std::stoi(argv[4]);
+    }
+    // Handling case in which just essential parameters are passed (ie no file_number selected)
+    if (argc == 4) {
+        n = std::stoul(argv[1]);
+        max_it = std::stoul(argv[2]);
+        tol = std::atof(argv[3]);
+    }
     
     // Use chrono utilities for evaluating time for computation
     Timings::Chrono clock;
     clock.start();
-    Matrix res = jacobi::solve(n, f, tol, max_it, dir_bc);
+    // Compute result
+    Matrix res = jacobi::solve(n, fun, tol, max_it, dir_bc);
     clock.stop();
 
     // Compute L2-error of numerical solution (only rank 0)
     double h = 1./(n-1);
     if(rank == 0)
     {
-        Real err_ex{0};
-        for(std::size_t i = 0; i < n; ++i)
-        {
-            for(std::size_t j = 0; j < n; ++j)
+        // If exact solution provided, compute L2 error of numerical solution
+        if( !uexString.empty() ){
+            Real err_ex{0};
+            for(std::size_t i = 0; i < n; ++i)
             {
-                err_ex += (res(i,j) - u_ex({h*i,h*j})) * (res(i,j) - u_ex({h*i,h*j}));
+                for(std::size_t j = 0; j < n; ++j)
+                {
+                    err_ex += (res(i,j) - u_ex(M_PI,h*i,h*j)) * (res(i,j) - u_ex(M_PI,h*i,h*j));
+                }
             }
+            err_ex *= h;
+            err_ex = sqrt(err_ex);
+            // Print error
+            std::cout << "\nError: " << err_ex << std::endl;
         }
-        err_ex *= h;
-        err_ex = sqrt(err_ex);
-        // Print results
-        std::cout << "\nError: " << err_ex << std::endl;
+        // Print computing time
         std::cout << clock << std::endl;
         std::cout << std::endl;
 
