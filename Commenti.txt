@@ -1,0 +1,13 @@
+How am I compiling? This should be written in the README
+
+Why is also present t in the function definition, instead of putting pi?
+Add the following in the constructor to define pi also for the parser:
+  m_parser.DefineConst("pi",M_PI);
+
+Comments on test:
+  - the executable should only use the binary main.exe, not also generate it. The test folder is meant to make 
+    a test, not to generate the binary. The whole test should be confined in the test folder.
+
+The code is overall well structured and well designed. I appreciate the presence of both the muparser and the json.
+The code performance are not optimal, but the results have been discussed and understood.
+It is a bit surprising the large error for the latter simulation, but to me is not evident what is happening.
